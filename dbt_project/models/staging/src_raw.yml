@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: categories
+      - name: cities
+      - name: customer_profile_events
+      - name: order_items
+      - name: order_status_events
+      - name: orders
+      - name: payment_methods
+      - name: payments
+      - name: products
+      - name: shipments
+      - name: shipping_services
+      - name: vouchers

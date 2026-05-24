@@ -1,0 +1,21 @@
+dbt_project:
+  outputs:
+    dev:
+      type: postgres
+      host: 127.0.0.1
+      port: 5433
+      user: dw_user
+      pass: dw_password
+      dbname: order_management_dw
+      schema: public
+      threads: 1
+    docker:
+      type: postgres
+      host: postgres_dw
+      port: 5432
+      user: dw_user
+      pass: dw_password
+      dbname: order_management_dw
+      schema: public
+      threads: 1
+  target: dev
