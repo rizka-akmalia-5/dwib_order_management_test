@@ -1,0 +1,69 @@
+version: '3.8'
+services:
+  # 1. DATABASE UTAMA (PostgreSQL)
+  postgres_dw:
+    image: postgres:15
+    container_name: postgres_dw
+    environment:
+      POSTGRES_USER: dw_user
+      POSTGRES_PASSWORD: dw_password
+      POSTGRES_DB: order_management_dw
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. KONFIGURATOR DATABASE INTERNAL (Menginstal library & membuat user admin otomatis)
+  airflow-init:
+    image: apache/airflow:2.7.1-python3.10
+    container_name: apache_airflow_init
+    command: >
+      bash -c "pip install pandas sqlalchemy psycopg2-binary && airflow db init && airflow users create --username admin --firstname Admin --lastname Admin --role Admin --email admin@example.com --password admin"
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://dw_user:dw_password@postgres_dw:5432/order_management_dw
+    depends_on:
+      - postgres_dw
+
+  # 3. APACHE AIRFLOW WEB SERVER UTAMA (Dashboard Web)
+  airflow:
+    image: apache/airflow:2.7.1-python3.10
+    container_name: apache_airflow
+    command: >
+      bash -c "pip install pandas sqlalchemy psycopg2-binary && airflow webserver"
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://dw_user:dw_password@postgres_dw:5432/order_management_dw
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - .:/opt/airflow/project_folder
+    depends_on:
+      postgres_dw:
+        condition: service_started
+      airflow-init:
+        condition: service_completed_successfully
+
+  # 4. AIRFLOW SCHEDULER (Otak Pengeksekusi Tugas)
+  scheduler:
+    image: apache/airflow:2.7.1-python3.10
+    container_name: apache_airflow_scheduler
+    command: >
+      bash -c "pip install pandas sqlalchemy psycopg2-binary && airflow scheduler"
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://dw_user:dw_password@postgres_dw:5432/order_management_dw
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - .:/opt/airflow/project_folder
+    depends_on:
+      postgres_dw:
+        condition: service_started
+      airflow-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
